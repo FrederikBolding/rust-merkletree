@@ -1,19 +1,46 @@
 #[cfg(test)]
 mod tests {
 
-    use rust_merkletree::{verify_proof, MerkleTree};
+    use rust_merkletree::{verify_proof, MerkleTree, keccak256};
 
-    fn strip_hex_prefix (s: &str) -> &str {
+    fn strip_hex_prefix(s: &str) -> &str {
         if &s[0..2] == "0x" {
             return &s[2..];
         }
         return s;
     }
 
-    fn hex_to_u8 (s: &str) -> [u8; 32] {
+    fn hex_to_u8(s: &str) -> [u8; 32] {
         let mut bytes = [0u8; 32];
-        assert_eq!(hex::decode_to_slice(strip_hex_prefix(s), &mut bytes), Ok(()));
+        assert_eq!(
+            hex::decode_to_slice(strip_hex_prefix(s), &mut bytes),
+            Ok(())
+        );
         return bytes;
+    }
+
+    #[test]
+    fn test_generate_proof() {
+        let items = ["foo", "bar", "baz", "qux"];
+        let tree = MerkleTree::new(items.to_vec());
+        let proof = tree.generate_proof(items[0]);
+        let length = proof.len();
+        let leaf = keccak256(items[0].as_bytes());
+        let result = verify_proof(tree.get_root(), proof, leaf);
+        assert_eq!(length, 2);
+        assert_eq!(result, true);
+    }
+
+    #[test]
+    fn test_generate_proof_2() {
+        let items = ["foo", "bar", "baz", "qux"];
+        let tree = MerkleTree::new(items.to_vec());
+        let proof = tree.generate_proof(items[3]);
+        let length = proof.len();
+        let leaf = keccak256(items[3].as_bytes());
+        let result = verify_proof(tree.get_root(), proof, leaf);
+        assert_eq!(length, 2);
+        assert_eq!(result, true);
     }
 
     #[test]
@@ -34,7 +61,10 @@ mod tests {
             "0x1fe2900f87574dfd51c79cfda30dc8173acae447c9a57a29c3bb6f8c6cb09a37",
             "0x0432d89baffd3d97db8bdac0bae49e19da604e130e45f024e4fee755f689e9f3",
             "0x8ed08cac37d39e938a05e17bd4d501a8fd4aea8d482301e85c696aa5e149728e",
-        ].into_iter().map(|x| hex_to_u8(x)).collect();
+        ]
+        .into_iter()
+        .map(|x| hex_to_u8(x))
+        .collect();
         let leaf = hex_to_u8("0x60e2ab95d8401a01f79a5ef99732da234912df7d9d6a20b72b129c7504256cac");
         let root = hex_to_u8("0xadbd1f4ac8653b35d3e4e3383beeea3a616b3efaa94932a654035a03c49313e6");
         let result = verify_proof(root, proof, leaf);
