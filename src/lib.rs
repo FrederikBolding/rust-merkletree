@@ -27,27 +27,24 @@ impl MerkleTree {
         let leaf = keccak256(item.as_bytes());
         let leaves = self.layers.last().unwrap();
         let leaf_index = leaves.iter().position(|e| e == &leaf).unwrap();
-        let leaf_sibling = if leaf_index % 2 == 0 {
-            leaves[leaf_index + 1]
-        } else {
-            leaves[leaf_index - 1]
-        };
-        proof.push(leaf_sibling);
-        let mut last_index =
+
+        // Current index used for traversal, represents the index in the entire tree and not in the layer
+        let mut current_index =
             (2 as usize).pow((self.layers.len() - 1).try_into().unwrap()) - 1 + leaf_index;
 
-        for layer_index in (1..self.layers.len() - 1).rev() {
+        for layer_index in (1..self.layers.len()).rev() {
             let layer = &self.layers[layer_index];
-            let parent_index = (last_index - 1) / 2;
-            last_index = parent_index;
-            let parent_layer_index =
-                parent_index - ((2 as usize).pow((layer_index).try_into().unwrap()) - 1);
-            let sibling = if parent_layer_index % 2 == 0 {
-                layer[parent_layer_index + 1]
+            // Internal index represents the index in the current layer
+            let internal_index =
+                current_index - ((2 as usize).pow((layer_index).try_into().unwrap()) - 1);
+            let sibling = if internal_index % 2 == 0 {
+                layer[internal_index + 1]
             } else {
-                layer[parent_layer_index - 1]
+                layer[internal_index - 1]
             };
             proof.push(sibling);
+
+            current_index = (current_index - 1) / 2;
         }
         return proof;
     }

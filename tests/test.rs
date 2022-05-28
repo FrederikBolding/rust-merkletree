@@ -59,9 +59,9 @@ mod tests {
     fn test_generate_proof_4() {
         let items = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
         let tree = MerkleTree::new(items.to_vec());
-        let proof = tree.generate_proof(items[9]);
+        let proof = tree.generate_proof(items[1]);
         let length = proof.len();
-        let leaf = keccak256(items[9].as_bytes());
+        let leaf = keccak256(items[1].as_bytes());
         let result = verify_proof(tree.get_root(), proof, leaf);
         assert_eq!(length, 4);
         assert_eq!(result, true);
