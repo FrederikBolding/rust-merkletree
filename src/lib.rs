@@ -34,14 +34,14 @@ impl MerkleTree {
         };
         proof.push(leaf_sibling);
         let mut last_index =
-            (2 as usize).pow((self.layers.len() - 1).try_into().unwrap()) + leaf_index;
+            (2 as usize).pow((self.layers.len() - 1).try_into().unwrap()) - 1 + leaf_index;
 
         for layer_index in (1..self.layers.len() - 1).rev() {
             let layer = &self.layers[layer_index];
-            let parent_index = (((last_index - 1) as f32) / (2 as f32)).ceil() as usize;
+            let parent_index = (last_index - 1) / 2;
             last_index = parent_index;
             let parent_layer_index =
-                parent_index - (2 as usize).pow((layer_index - 1).try_into().unwrap()) - 1;
+                parent_index - ((2 as usize).pow((layer_index).try_into().unwrap()) - 1);
             let sibling = if parent_layer_index % 2 == 0 {
                 layer[parent_layer_index + 1]
             } else {
@@ -62,7 +62,12 @@ fn build_tree(leaves: Vec<[u8; 32]>) -> Vec<Vec<[u8; 32]>> {
         let previous_layer = &layers[layer_index - 1];
         for i in (0..previous_layer.len()).step_by(2) {
             let left = previous_layer[i];
-            let right = previous_layer[i + 1];
+            let right = if i + 1 < previous_layer.len() {
+                previous_layer[i + 1]
+            } else {
+                // Duplicate hash in case of odd number of leaves / unbalanced tree
+                left
+            };
             let mut combined = [left, right];
             // Sort pairs for easier verification
             combined.sort();

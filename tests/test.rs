@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use rust_merkletree::{verify_proof, MerkleTree, keccak256};
+    use rust_merkletree::{keccak256, verify_proof, MerkleTree};
 
     fn strip_hex_prefix(s: &str) -> &str {
         if &s[0..2] == "0x" {
@@ -40,6 +40,42 @@ mod tests {
         let leaf = keccak256(items[3].as_bytes());
         let result = verify_proof(tree.get_root(), proof, leaf);
         assert_eq!(length, 2);
+        assert_eq!(result, true);
+    }
+
+    #[test]
+    fn test_generate_proof_3() {
+        let items = ["foo", "bar", "baz", "qux", "quux", "quuux"];
+        let tree = MerkleTree::new(items.to_vec());
+        let proof = tree.generate_proof(items[5]);
+        let length = proof.len();
+        let leaf = keccak256(items[5].as_bytes());
+        let result = verify_proof(tree.get_root(), proof, leaf);
+        assert_eq!(length, 3);
+        assert_eq!(result, true);
+    }
+
+    #[test]
+    fn test_generate_proof_4() {
+        let items = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+        let tree = MerkleTree::new(items.to_vec());
+        let proof = tree.generate_proof(items[9]);
+        let length = proof.len();
+        let leaf = keccak256(items[9].as_bytes());
+        let result = verify_proof(tree.get_root(), proof, leaf);
+        assert_eq!(length, 4);
+        assert_eq!(result, true);
+    }
+
+    #[test]
+    fn test_generate_proof_unbalanced() {
+        let items = ["foo", "bar", "baz", "qux", "quux"];
+        let tree = MerkleTree::new(items.to_vec());
+        let proof = tree.generate_proof(items[4]);
+        let length = proof.len();
+        let leaf = keccak256(items[4].as_bytes());
+        let result = verify_proof(tree.get_root(), proof, leaf);
+        assert_eq!(length, 3);
         assert_eq!(result, true);
     }
 
