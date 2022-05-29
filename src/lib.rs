@@ -2,7 +2,6 @@ use tiny_keccak::{Hasher, Keccak};
 
 pub struct MerkleTree {
     pub layers: Vec<Vec<[u8; 32]>>,
-    pub data: Vec<String>,
 }
 
 impl MerkleTree {
@@ -10,10 +9,8 @@ impl MerkleTree {
         let mut leaves: Vec<[u8; 32]> = items.iter().map(|i| keccak256(i.as_bytes())).collect();
         // Sort leaves for easier verification
         leaves.sort();
-        let layers = build_tree(leaves);
         Self {
-            data: items.iter().map(|i| i.to_string()).collect(),
-            layers,
+            layers: build_tree(leaves),
         }
     }
 
@@ -29,14 +26,12 @@ impl MerkleTree {
         let leaf_index = leaves.iter().position(|e| e == &leaf).unwrap();
 
         // Current index used for traversal, represents the index in the entire tree and not in the layer
-        let mut current_index =
-            (2 as usize).pow((self.layers.len() - 1).try_into().unwrap()) - 1 + leaf_index;
+        let mut current_index = get_tree_nodes(self.layers.len() - 1) + leaf_index;
 
         for layer_index in (1..self.layers.len()).rev() {
             let layer = &self.layers[layer_index];
             // Internal index represents the index in the current layer
-            let internal_index =
-                current_index - ((2 as usize).pow((layer_index).try_into().unwrap()) - 1);
+            let internal_index = current_index - get_tree_nodes(layer_index);
             let sibling = if internal_index % 2 == 0 {
                 layer[internal_index + 1]
             } else {
@@ -50,9 +45,19 @@ impl MerkleTree {
     }
 }
 
+// For a given height, get the number of nodes in the tree
+fn get_tree_nodes(height: usize) -> usize {
+    return (2usize).pow((height).try_into().unwrap()) - 1;
+}
+
+// Given the number of leaves, get the height of the tree
+fn get_tree_height(leaves: usize) -> usize {
+    let count = (2 * leaves - 1) as f32;
+    return count.log2().floor() as usize;
+}
+
 fn build_tree(leaves: Vec<[u8; 32]>) -> Vec<Vec<[u8; 32]>> {
-    let count = (2 * leaves.len() - 1) as f32;
-    let layer_count = count.log2().floor() as usize;
+    let layer_count = get_tree_height(leaves.len());
     let mut layers = vec![leaves.to_vec()];
     for layer_index in 1..layer_count + 1 {
         let mut layer = Vec::<[u8; 32]>::new();
@@ -68,8 +73,7 @@ fn build_tree(leaves: Vec<[u8; 32]>) -> Vec<Vec<[u8; 32]>> {
             let mut combined = [left, right];
             // Sort pairs for easier verification
             combined.sort();
-            let node = keccak256(&combined.concat());
-            layer.push(node);
+            layer.push(keccak256(&combined.concat()));
         }
         layers.push(layer);
     }
@@ -81,10 +85,10 @@ fn build_tree(leaves: Vec<[u8; 32]>) -> Vec<Vec<[u8; 32]>> {
 pub fn verify_proof(root: [u8; 32], proof: Vec<[u8; 32]>, leaf: [u8; 32]) -> bool {
     let mut current = leaf;
     for elem in proof {
-        if current <= elem {
-            current = keccak256(&[current, elem].concat());
+        current = if current <= elem {
+            keccak256(&[current, elem].concat())
         } else {
-            current = keccak256(&[elem, current].concat());
+            keccak256(&[elem, current].concat())
         }
     }
     return current == root;
